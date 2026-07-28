@@ -1,0 +1,52 @@
+# ===== Dependencies =====
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+*.egg
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+*.env
+
+# ===== IDE / Editor =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== Build =====
+dist/
+build/
+*.log
+
+# ===== Vue / Vite =====
+frontend/dist/
+frontend/.vite/
+
+# ===== Python =====
+*.py[cod]
+*.so
+.Python
+pip-wheel-metadata/
+
+# ===== Docker =====
+docker-compose.override.yml
+
+# ===== Coverage =====
+coverage/
+htmlcov/
+.coverage
+*.cover
+
+# ===== Alembic =====
+server/alembic/versions/*.pyc
