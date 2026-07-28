@@ -50,3 +50,6 @@ htmlcov/
 
 # ===== Alembic =====
 server/alembic/versions/*.pyc
+
+# ===== Claude Code =====
+.claude/
