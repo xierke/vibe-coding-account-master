@@ -7,6 +7,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from app.exceptions import AppError
+from app.core.config import settings
 
 logger = logging.getLogger("dailytracker")
 
@@ -37,7 +38,7 @@ def register_exception_handlers(app: FastAPI):
         )
 
     @app.exception_handler(Exception)
-    async def unhandled_exception_handler(request: requests.Request, exc: Exception):
+    async def unhandled_exception_handler(request: Request, exc: Exception):
         """处理未预期的异常 — 记录完整堆栈，返回通用 500。"""
         logger.error(
             "Unhandled exception",
@@ -53,6 +54,7 @@ def register_exception_handlers(app: FastAPI):
             content={
                 "code": 50000,
                 "message": "服务器内部错误",
-                "detail": str(exc) if app.debug else "请稍后再试",
+                # DEBUG 模式下返回错误详情，生产环境隐藏
+                "detail": str(exc) if settings.debug else "请稍后再试",
             },
         )

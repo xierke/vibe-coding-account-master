@@ -4,6 +4,8 @@
 from pydantic import BaseModel, EmailStr, field_validator
 import re
 
+from app.core.sanitize import sanitize_text
+
 
 # ============================================================
 # 注册
@@ -21,7 +23,8 @@ class RegisterRequest(BaseModel):
         v = v.strip()
         if len(v) < 2 or len(v) > 20:
             raise ValueError("用户名长度需在 2-20 个字符之间")
-        return v
+        # XSS 防护：对用户输入做 HTML 实体编码
+        return sanitize_text(v) or v
 
     @field_validator("password")
     @classmethod
@@ -30,10 +33,10 @@ class RegisterRequest(BaseModel):
             raise ValueError("密码长度需在 8-20 个字符之间")
         if not re.search(r'[A-Z]', v) and not re.search(r'[a-z]', v):
             raise ValueError("密码需包含英文字母")
-        if not re.search(r'[a-z]', v):
-            pass  # allow uppercase only
         if not re.search(r'\d', v):
             raise ValueError("密码需包含数字")
+        if not re.search(r'[!@#$%^&*(),.?\":{}|<>_+\-=\[\]\\;\'/~`]', v):
+            raise ValueError("密码需包含至少一个特殊字符（如 !@#$%）")
         return v
 
     @field_validator("confirm_password")
@@ -135,8 +138,12 @@ class ResetPasswordRequest(BaseModel):
     def validate_password(cls, v: str) -> str:
         if len(v) < 8 or len(v) > 20:
             raise ValueError("密码长度需在 8-20 个字符之间")
+        if not re.search(r'[A-Za-z]', v):
+            raise ValueError("密码需包含英文字母")
         if not re.search(r'\d', v):
             raise ValueError("密码需包含数字")
+        if not re.search(r'[!@#$%^&*(),.?\":{}|<>_+\-=\[\]\\;\'/~`]', v):
+            raise ValueError("密码需包含至少一个特殊字符（如 !@#$%）")
         return v
 
     @field_validator("confirm_password")

@@ -4,6 +4,8 @@
 from datetime import datetime
 from pydantic import BaseModel, field_validator
 
+from app.core.sanitize import sanitize_text
+
 
 # ============================================================
 # 用户个人资料
@@ -31,8 +33,11 @@ class UserProfileUpdateRequest(BaseModel):
     def validate_username(cls, v: str | None) -> str | None:
         if v is not None:
             v = v.strip()
+            # XSS 防护：先净化再做长度校验
+            v = sanitize_text(v) or v
             if len(v) < 2 or len(v) > 20:
                 raise ValueError("用户名长度需在 2-20 个字符之间")
+            return v
         return v
 
 

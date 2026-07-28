@@ -6,6 +6,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, field_validator
 
+from app.core.sanitize import sanitize_text
+
 
 # ============================================================
 # 创建账单
@@ -37,7 +39,8 @@ class BillCreateRequest(BaseModel):
     def validate_note(cls, v: str | None) -> str | None:
         if v and len(v) > 200:
             raise ValueError("备注最多 200 字")
-        return v
+        # XSS 防护：对用户输入做 HTML 实体编码
+        return sanitize_text(v)
 
 
 # ============================================================
@@ -72,7 +75,8 @@ class BillUpdateRequest(BaseModel):
     def validate_note(cls, v: str | None) -> str | None:
         if v and len(v) > 200:
             raise ValueError("备注最多 200 字")
-        return v
+        # XSS 防护：对用户输入做 HTML 实体编码
+        return sanitize_text(v)
 
 
 # ============================================================

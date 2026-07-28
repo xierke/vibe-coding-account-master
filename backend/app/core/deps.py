@@ -66,9 +66,12 @@ async def rate_limit(
     limit_per_minute: int = 100,
 ):
     """
-    基于用户或 IP 的速率限制（Redis 滑动窗口）。
+    基于用户或 IP 的速率限制（Redis 滑动窗口 + 内存 fallback）。
     默认 100 次/分钟。
+    Redis 不可用时退化为内存存储（不跨进程共享，单进程部署可用）。
     """
+    import time
+
     # 识别 key：优先用用户 ID，否则用 IP
     user_id = None
     try:
@@ -83,12 +86,46 @@ async def rate_limit(
     redis_key = f"rate_limit:{client_key}"
 
     r = await get_redis()
-    current = await r.get(redis_key)
 
-    if current is None:
-        # 首次请求，设置计数器并 60 秒过期
-        await r.set(redis_key, 1, ex=60)
-    elif int(current) >= limit_per_minute:
+    # 尝试 Redis
+    try:
+        current = await r.get(redis_key)
+
+        if current is None:
+            await r.set(redis_key, 1, ex=60)
+        elif int(current) >= limit_per_minute:
+            raise RateLimitError("请求过于频繁，请稍后再试")
+        else:
+            await r.incr(redis_key)
+        return
+    except RateLimitError:
+        raise
+    except Exception:
+        # Redis 不可用 — fallback 到内存存储
+        pass
+
+    # 内存 fallback（不依赖 Redis）
+    if not hasattr(rate_limit, "_memory_store"):
+        rate_limit._memory_store = {}  # type: dict[str, tuple[int, float]]
+
+    now = time.time()
+    current_val, window_start = rate_limit._memory_store.get(redis_key, (0, now))
+
+    # 过期窗口重置
+    if now - window_start > 60:
+        current_val = 0
+        window_start = now
+
+    if current_val >= limit_per_minute:
         raise RateLimitError("请求过于频繁，请稍后再试")
-    else:
-        await r.incr(redis_key)
+
+    rate_limit._memory_store[redis_key] = (current_val + 1, window_start)
+
+    # 清理过期 key（每 100 次清理一次）
+    if not hasattr(rate_limit, "_cleanup_counter"):
+        rate_limit._cleanup_counter = 0
+    rate_limit._cleanup_counter += 1
+    if rate_limit._cleanup_counter % 100 == 0:
+        expired = [k for k, (_, ws) in rate_limit._memory_store.items() if now - ws > 120]
+        for k in expired:
+            del rate_limit._memory_store[k]

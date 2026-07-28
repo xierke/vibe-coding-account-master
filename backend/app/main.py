@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.database import engine, async_session_factory
 from app.core.redis import close_redis
 from app.exceptions.handlers import register_exception_handlers
-from app.middleware import RequestIDMiddleware, LoggingMiddleware
+from app.middleware import RequestIDMiddleware, LoggingMiddleware, SecurityHeadersMiddleware
 from app.api import (
     auth_router,
     bills_router,
@@ -92,16 +92,19 @@ app = FastAPI(
 # 1. 请求 ID — 最外层，每个请求分配唯一 ID
 app.add_middleware(RequestIDMiddleware)
 
-# 2. 访问日志
+# 2. 安全响应头 — 尽早添加
+app.add_middleware(SecurityHeadersMiddleware)
+
+# 3. 访问日志
 app.add_middleware(LoggingMiddleware)
 
-# 3. CORS
+# 4. CORS — 开发环境默认允许 localhost，生产环境通过环境变量配置
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID"],
 )
 
 # ============================================================

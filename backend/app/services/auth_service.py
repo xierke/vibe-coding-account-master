@@ -4,6 +4,7 @@
 """
 import logging
 import random
+import time
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
@@ -39,6 +40,9 @@ class AuthService:
     - 不导入 HTTP 相关类型（Request/Response）
     - 异常用 AppError 子类，由全局处理器统一格式化
     """
+
+    # 内存 fallback 存储（Redis 不可用时使用，不跨进程共享）
+    _memory_codes: dict[str, tuple[str, float]] = {}
 
     # ============================================================
     # 注册
@@ -255,18 +259,35 @@ class AuthService:
 
         code_type: "email" | "sms"
         当前短信为 Mock 实现，验证码打印到控制台日志。
+        Redis 不可用时使用内存字典作为 fallback。
         """
         # 生成 6 位随机数字
         code = str(random.randint(100000, 999999))
 
         # 存入 Redis
         redis_key = f"verify_code:{code_type}:{target}"
+        redis_ok = False
         try:
             r = await get_redis()
             await r.set(redis_key, code, ex=settings.verify_code_ttl_seconds)
+            redis_ok = True
         except Exception:
-            logger.warning("Redis 不可用，验证码仅打印到日志，无法用于实际验证")
-            # 不抛异常 — Redis 不可用时验证码仅打印到日志，不阻断流程
+            logger.warning("Redis 不可用，验证码使用内存存储 (fallback)")
+
+        # 内存 fallback — Redis 不可用时使用
+        if not redis_ok:
+            AuthService._memory_codes[redis_key] = (
+                code,
+                time.time() + settings.verify_code_ttl_seconds,
+            )
+            # 清理过期内存验证码
+            now = time.time()
+            expired = [
+                k for k, (_, exp) in AuthService._memory_codes.items()
+                if now > exp
+            ]
+            for k in expired:
+                del AuthService._memory_codes[k]
 
         if code_type == "email":
             logger.info(f"=== [Mock Email] 邮箱 {target} 的验证码: {code} ===")
@@ -331,21 +352,36 @@ class AuthService:
     async def _verify_code(target: str, code: str, code_type: str) -> None:
         """
         校验验证码是否匹配且未过期。
+        优先使用 Redis，Redis 不可用时回退到内存存储。
         """
         redis_key = f"verify_code:{code_type}:{target}"
+
+        # 尝试 Redis
         try:
             r = await get_redis()
             stored_code = await r.get(redis_key)
+            if stored_code is not None:
+                if stored_code != code:
+                    raise ValidationError("验证码错误")
+                # 验证成功后删除验证码，防止重用
+                try:
+                    await r.delete(redis_key)
+                except Exception:
+                    pass
+                return
         except Exception:
-            raise ValidationError("验证码服务暂时不可用，请稍后再试")
+            pass
 
-        if stored_code is None:
+        # 内存 fallback
+        mem_entry = AuthService._memory_codes.get(redis_key)
+        if mem_entry is None:
+            raise ValidationError("验证码已过期或未发送")
+        stored_code, expires_at = mem_entry
+        if time.time() > expires_at:
+            del AuthService._memory_codes[redis_key]
             raise ValidationError("验证码已过期或未发送")
         if stored_code != code:
             raise ValidationError("验证码错误")
 
-        # 验证成功后删除验证码，防止重用
-        try:
-            await r.delete(redis_key)
-        except Exception:
-            pass
+        # 验证成功后删除
+        del AuthService._memory_codes[redis_key]

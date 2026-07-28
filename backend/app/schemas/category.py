@@ -5,6 +5,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, field_validator
 
+from app.core.sanitize import sanitize_text
+
 
 # ============================================================
 # 创建分类
@@ -25,7 +27,8 @@ class CategoryCreateRequest(BaseModel):
             raise ValueError("分类名称不能为空")
         if len(v) > 30:
             raise ValueError("分类名称最多 30 个字符")
-        return v
+        # XSS 防护：对用户输入做 HTML 实体编码
+        return sanitize_text(v) or v
 
     @field_validator("type")
     @classmethod
@@ -61,6 +64,8 @@ class CategoryUpdateRequest(BaseModel):
                 raise ValueError("分类名称不能为空")
             if len(v) > 30:
                 raise ValueError("分类名称最多 30 个字符")
+            # XSS 防护：对用户输入做 HTML 实体编码
+            return sanitize_text(v) or v
         return v
 
     @field_validator("color")
