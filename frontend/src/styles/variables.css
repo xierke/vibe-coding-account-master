@@ -1,0 +1,61 @@
+/* ===== DailyTracker CSS 变量定义 ===== */
+/* 暖色调清爽风格，无动画 */
+
+:root {
+  /* ===== 主色系（暖珊瑚） ===== */
+  --color-primary: #E07B5A;
+  --color-primary-hover: #C96A4C;
+  --color-primary-light: #FDF0EB;
+
+  /* ===== 辅助色 ===== */
+  --color-income: #7BA587;      /* 暖绿 — 收入标识 */
+  --color-info: #6B9EB3;        /* 暖蓝 — 链接、信息 */
+  --color-warning: #D4786E;     /* 警告/超支/删除 */
+
+  /* ===== 文字颜色 ===== */
+  --text-primary: #4A3F3A;      /* 标题、正文 */
+  --text-secondary: #8B7E75;    /* 辅助说明、占位符 */
+  --text-disabled: #BFB5AD;     /* 禁用状态文字 */
+
+  /* ===== 背景颜色 ===== */
+  --bg-page: #FAF7F4;           /* 页面底色（暖白） */
+  --bg-card: #FFFFFF;           /* 卡片/列表项背景 */
+  --bg-hover: #FDF5F0;          /* 列表悬停态 */
+
+  /* ===== 边框 ===== */
+  --border: #EBE3DC;            /* 分割线、边框 */
+
+  /* ===== 间距（8px 栅格） ===== */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  /* ===== 圆角 ===== */
+  --radius-sm: 8px;             /* 按钮、输入框 */
+  --radius-md: 12px;            /* 卡片 */
+
+  /* ===== 阴影 ===== */
+  --shadow-card: 0 1px 3px rgba(74, 63, 58, 0.08);
+
+  /* ===== 字号 ===== */
+  --font-xs: 12px;
+  --font-sm: 13px;
+  --font-base: 14px;
+  --font-md: 15px;
+  --font-lg: 16px;
+  --font-xl: 20px;
+  --font-2xl: 24px;
+  --font-3xl: 28px;
+  --font-4xl: 32px;
+
+  /* ===== 字体 ===== */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+
+  /* ===== 导航栏高度 ===== */
+  --header-height: 64px;
+  --tabbar-height: 56px;
+}
